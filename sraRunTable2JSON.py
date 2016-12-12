@@ -6,7 +6,21 @@ import json
 
 ###############################################################################
 
-def srt2dict(SRT):
+def elemCast(name, value):
+
+  map = {
+    "s": lambda x: x,
+    "l": lambda x: int(x),
+    "f": lambda x: float(x),
+  }
+
+  return map[name[-1]](value)
+
+#edef
+
+###############################################################################
+
+def srt2dict(SRT, dir):
   SRTf = SRT.Get(_.bioproject_s, _.biosample_s, _.sample_name_s, _.sra_sample_s, _.experiment_s, _.run_s)
   SRT  = SRT.Get(*(SRTf.Names + list(set(SRT.Names) - set(SRTf.Names))))
   biop = SRT.GroupBy(_.bioproject_s)
@@ -45,18 +59,25 @@ def srt2dict(SRT):
         measurements = []
         for measurement_level in zip(*experiment_level[1:]):
           measurement_id = measurement_level[0]
-          measurement = dict(zip(SRT.Names[-len(measurement_level[1:]):], measurement_level[1:]))
+          measurement = dict([(x[:-2], elemCast(x,y)) for (x,y) in zip(SRT.Names[-len(measurement_level[1:]):], measurement_level[1:])])
           measurement["id"]   = measurement_id
           measurement["type"] = "measurement"
+          measurement["loc"]  = "%s/%s.sra" % (dir, measurement_id)
+          if measurement.get("library_layout" == "SINGLE"):
+            measurement["r"] = "%s/%s.fastq" % (dir, measurement_id)
+          else:
+            measurement["r1"] = "%s/%s_1.fastq" % (dir, measurement_id)
+            measurement["r2"] = "%s/%s_2.fastq" % (dir, measurement_id)
+          fi
           measurements.append(measurement)
         #efor
-        experiment["measurements"] = measurements
+        experiment["data"] = measurements
         experiments.append(experiment)
       #efor
-      sample["experiments"] = experiments
+      sample["data"] = experiments
       samples.append(sample)
     #efor
-    project["samples"] = samples
+    project["data"] = samples
     projects.append(project)
   #efor
   D["data"] = projects
@@ -67,11 +88,12 @@ def srt2dict(SRT):
 ###############################################################################
 
 sraRunTable = os.sys.argv[1];
+location_dir = os.sys.argv[2];
 
 #######################################################
 
 SRT  = Read(sraRunTable)
-DICT = srt2dict(SRT)
+DICT = srt2dict(SRT, location_dir)
 JSON = json.dumps(DICT, indent=3, sort_keys=True)
 
 print JSON
