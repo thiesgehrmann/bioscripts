@@ -11,9 +11,9 @@ else
   list="$@"
 fi
 
-aspera_key="`which asperaconnect| rev | cut -d/ -f1 --complement | rev`/../etc/asperaweb_id_dsa.openssh"
+aspera_key="`readlink $(which asperaconnect)| rev | cut -d/ -f1 --complement | rev`/../etc/asperaweb_id_dsa.openssh"
 aspera_key="`readlink -f $aspera_key`"
-
+echo $aspera_key
 if [ ! -e "$aspera_key" ]; then
   echo "ERROR: can't find aspera key"
   exit 1;
@@ -40,6 +40,8 @@ function download_acc() {
   local odir="$2";
   local key="$3"
   local srv_loc=`get_srv_loc $acc`
+
+  echo $srv_loc
 
   ascp -i $key -k 1 -T -l200m anonftp@ftp.ncbi.nlm.nih.gov:$srv_loc $odir
 
