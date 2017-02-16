@@ -10,6 +10,8 @@ function initSched() {
   mkdir -p $schedDir/completed
   mkdir -p $schedDir/output
 
+  ( >&2 echo "#Initialized BASCHeduler in $schedDir" )
+
   echo $schedDir
 }
 
@@ -93,23 +95,17 @@ function getCompletedJobs() {
 
 ###############################################################################
 
-function basch() {
+function getJobs() {
+  local schedDir="$1"
+  ls $schedDir/jobcommands | wc -l
+}
 
- 
-  local schedDir=`initSched`
+###############################################################################
 
-  echo "#Initialized BASCHeduler in $schedDir"
-
-  declare -a jobs=("${!1}")
+function runBasch() {
+  local schedDir="$1"
   local nProc="$2"
-  local nJobs="${#jobs[@]}"
-  
-  local jobID=0
-  for job in "${jobs[@]}"; do
-    let jobID=jobID+1
-    echo -e "#!/bin/bash\n$job" > $schedDir/jobcommands/$jobID
-    queueJob $schedDir $jobID
-  done
+  local nJobs=`getJobs $schedDir`
 
   while true; do
 
@@ -119,11 +115,11 @@ function basch() {
       sleep 0.01
     done
 
+    echo -en "\r#Queued: `getQueuedJobs $schedDir`, Running: `getRunningJobs $schedDir`, Completed: `getCompletedJobs $schedDir`"
+
     if [ `getCompletedJobs $schedDir` -eq $nJobs ]; then
       echo ""
       break;
-    else
-      echo -en "\r#Queued: `getQueuedJobs $schedDir`, Running: `getRunningJobs $schedDir`, Completed: `getCompletedJobs $schedDir`"
     fi
 
     sleep 1
@@ -138,3 +134,40 @@ function basch() {
 }
 
 ###############################################################################
+
+function basch() {
+ 
+  local schedDir=`initSched`
+
+  declare -a jobs=("${!1}")
+  local nProc="$2"
+  
+  local jobID=0
+  for job in "${jobs[@]}"; do
+    let jobID=jobID+1
+    echo -e "#!/bin/bash\n$job" > $schedDir/jobcommands/$jobID
+    queueJob $schedDir $jobID
+  done
+
+  runBasch $schedDir $nProc
+  return $?
+}
+
+###############################################################################
+
+function baschf() {
+
+  local schedDir=`initSched`
+
+  local jobFile="$1"
+  local nProc="$2"
+
+  split -l 1 -d -a 5 $jobFile $schedDir/jobcommands/job.
+  ls $schedDir/jobcommands/ | while read jobID; do
+    queueJob $schedDir $jobID
+  done
+
+  runBasch $schedDir $nProc
+  return $?
+
+}
