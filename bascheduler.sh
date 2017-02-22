@@ -162,7 +162,7 @@ function baschf() {
   local jobFile="$1"
   local nProc="$2"
 
-  split -l 1 -d -a 5 $jobFile $schedDir/jobcommands/job.
+  split -l 1 -d -a 10 $jobFile $schedDir/jobcommands/job.
   ls $schedDir/jobcommands/ | while read jobID; do
     queueJob $schedDir $jobID
   done
