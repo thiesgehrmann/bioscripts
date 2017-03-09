@@ -2,8 +2,12 @@
 ###############################################################################
 
 VCFSH_INSTALL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
+vcfshawk="$VCFSH_INSTALL_DIR/vcfsh.awk"
+
+###############################################################################
 
 function vcf_set_col_val() {
+# Set a specific column to the same value for all lines in a VCF file
 
   local col=$1
   local val=$2
@@ -26,14 +30,14 @@ function vcf_set_col_val() {
 }
 
 ###############################################################################
+# Add a field(name)/value(val) pair to the info field of all lines in a VCF file
 
 function vcf_add_info() {
 
   local name="$1"
   local val="$2"
 
-  awk -v name="$name" -v val="$val"  -v sd="$VCFSH_INSTALL_DIR" '
-    @include sd "/vcfsh.awk"
+  awk -v name="$name" -v val="$val"  -i "$vcfshawk" '
   {
     if (substr($0,1,1) == "#") {
       print $0
@@ -48,11 +52,15 @@ function vcf_add_info() {
 }
 
 ###############################################################################
+# Produce a list with the number of times a specific value occurs in an info field
 
 function vcf_count_info_feature(){
+
+  field="$1"
+
   tr '\t' '\n' \
   | tr ';' '\n' \
-  | grep -e "^$1" \
+  | grep -e "^$field" \
   | cut -d= -f2 \
   | sort \
   | uniq -c \
@@ -62,14 +70,13 @@ function vcf_count_info_feature(){
 }
 
 ###############################################################################
+# Merge entries in a VCF file that are the same locus
 
 function vcf_merge_same() {
 
   sort -rk1 -k2 -k4 -k5 \
   | uniq \
-  | awk -F $'\t' -v sd="$VCFSH_INSTALL_DIR" '
-   @include sd "/vcfsh.awk"
-
+  | awk -F $'\t' -i "$vcfshawk" '
    BEGIN{
      OFS = FS
      emptyVCF(current)
@@ -96,14 +103,14 @@ function vcf_merge_same() {
 }
 
 ###############################################################################
+# Filter a VCF file based on the number of values in an info field
 
 function vcf_filter_info_length() {
 
   local field="$1"
   local len="$2"
 
-  awk -v field="$field" -v len="$len" -v sd="$VCFSH_INSTALL_DIR" '
-    @include sd "/vcfsh.awk"
+  awk -v field="$field" -v len="$len" -i "$vcfshawk" '
     {
     if (substr($0,1,1) == "#") {
       print $0
@@ -118,13 +125,13 @@ function vcf_filter_info_length() {
 }
 
 ###############################################################################
+# Filter a VCF file based on the value of a field in the info field
 
 function vcf_filter_info_value() {
   local field="$1"
   local val="$2"
 
-  awk -v field="$field" -v val="$val" -v sd="$VCFSH_INSTALL_DIR" '
-    @include sd "/vcfsh.awk"
+  awk -v field="$field" -v val="$val" -i "$vcfshawk" '
     {
     if (substr($0,1,1) == "#") {
       print $0
@@ -137,14 +144,16 @@ function vcf_filter_info_value() {
   }'
 }
 
+###############################################################################
+# Filter a VCF file by an arbitrary function in vcfsh.awk that operates on the info field
+
 function vcf_filter_info() {
 
   local func="$1"
   local field="$2"
   local val="$3"
 
-  awk -v func="func" -v field="$field" -v val="$val" -v sd="$VCFSH_INSTALL_DIR" '
-    @include sd "/vcfsh.awk"
+  awk -v func="func" -v field="$field" -v val="$val" -i "$vcfshawk" '
     {
     if (substr($0,1,1) == "#") {
       print $0
@@ -156,10 +165,10 @@ function vcf_filter_info() {
     }
   }'
 
-
 }
 
 ###############################################################################
+# Find the values in VCF file two that are not in VCF file one
 
 function vcf_diff() {
 
@@ -168,8 +177,7 @@ function vcf_diff() {
   local one="$1"
   local two="$2"
 
-  awk -F $'\t' -v sd="$VCFSH_INSTALL_DIR" '
-   @include sd "/vcfsh.awk"
+  awk -F $'\t' -i "$vcfshawk" '
    BEGIN{
      OFS = FS
      emptyVCF(current)
@@ -198,3 +206,4 @@ function vcf_diff() {
 
 }
 
+###############################################################################

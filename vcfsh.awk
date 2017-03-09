@@ -1,3 +1,11 @@
+###############################################################################
+# AWK functions to handle VCF file data
+
+
+###############################################################################
+
+# Check if two VCF arrays, a and b, are the same at the contig, pos, ref and alt locations
+# Return 0 if they are the same, 1 otherwise
 function isSame(a,b) {
   if (a[1] == b[1] && a[2] == b[2] && a[4] == b[4] && a[5] == b[5]) {
     return 0
@@ -5,6 +13,11 @@ function isSame(a,b) {
     return 1
   }
 }
+
+###############################################################################
+# Convert a VCF info string to a dictionary
+# info: info string
+# d: The output dictionary
 
 function info_str2dict(info,d) {
   split(info,a,";")
@@ -17,6 +30,10 @@ function info_str2dict(info,d) {
     }
   }
 }
+
+###############################################################################
+# Convert an info dictionary to a string
+# info: info dictionary e.g. produced by info_str2dict
 
 function info_dict2str(info) {
   info_str = ""
@@ -33,6 +50,12 @@ function info_dict2str(info) {
   return info_str
 }
 
+###############################################################################
+# Filter an VCF line based on the number of fields in an info field
+# variant: VCF array (e.g. from str2var)
+# field: the name of the field
+# len: The length that the field should have
+
 function info_filter_len(variant,field,len) {
   info_str2dict(variant[8],info)
   if (field in info) {
@@ -44,6 +67,12 @@ function info_filter_len(variant,field,len) {
   return 1
 }
 
+###############################################################################
+# Filter a VCF line based on the value of an info field
+# variant: VCF array (e.g. from str2var)
+# field: the name of the field
+# val: The value the field should have
+
 function info_filter_val(variant,field,val) {
   info_str2dict(variant[8],info)
   if (field in info) {
@@ -54,6 +83,10 @@ function info_filter_val(variant,field,val) {
   return 1
 }
 
+###############################################################################
+# Copy a VCF array into another array
+# a: VCF array (output from str2var
+# b: output array
 
 function copy_variant(a,b) {
 
@@ -68,6 +101,11 @@ function copy_variant(a,b) {
 
 }
 
+###############################################################################
+# Merge two info fields
+# a,b: info field strings
+# output: A string with merged info fields
+
 function merge_info(a,b) {
   # assumes same keys in a and b
   info_str2dict(a,ad)
@@ -78,6 +116,11 @@ function merge_info(a,b) {
   }
   return info_dict2str(merged)
 }
+
+###############################################################################
+# Merge two variants
+# a,b: vcf variants (output from str2var)
+# o: output VCF line
 
 function merge_variants(a,b,o) {
   o[1] = a[1]
@@ -109,11 +152,20 @@ function merge_variants(a,b,o) {
   o[8] = info_dict2str(info)
 }
 
+###############################################################################
+# Add an info value to a VCF line
+# var: VCF line (from str2vcf)
+# k: the field name
+# v: the field value
+
 function addInfo(var,k,v) {
   info_str2dict(var[8],d)
   d[k] = v
   var[8] = info_dict2str(d)
 }
+
+###############################################################################
+# Put a dummy VCF array into array a (e.g. to start a loop)
 
 function emptyVCF(a) {
   a[1] = "contig"
@@ -126,14 +178,29 @@ function emptyVCF(a) {
   a[8] = "info"
 }
 
+###############################################################################
+# Add a VCF line to an index of VCF lines, indexed by contig and position values
+# I: An index (if calling for the first time, an empty array is ok)
+# line: a vcf line
+
 function addToIndex(I,line) {
   str2var(line,variant)
   I[variant[1] ";" variant[2]] = line
 }
 
+###############################################################################
+# Convert a VCF line into a VCF array
+# s: VCF line string
+# a: output VCF array
+
 function str2var(s,a) {
   split(s,a,"\t")
 }
+
+###############################################################################
+# Convery a VCF array into a VCF line string
+# a: VCF array
+# output: VCF line String
 
 function var2str(a) {
   return a[1] "\t" a[2] "\t" a[3] "\t" a[4] "\t" a[5] "\t" a[6] "\t" a[7] "\t" a[8] "\t"
