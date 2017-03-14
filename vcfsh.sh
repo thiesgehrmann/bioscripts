@@ -108,15 +108,17 @@ function vcf_merge_same() {
 function vcf_filter_info_length() {
 
   local field="$1"
-  local len="$2"
+  local lmin="$2"
+  local lmax="$3"
 
-  awk -v field="$field" -v len="$len" -i "$vcfshawk" '
+  awk -v field="$field" -v lmin="$lmin" -v lmax="$lmax" -i "$vcfshawk" '
     {
     if (substr($0,1,1) == "#") {
       print $0
     } else {
       str2var($0,var)
-      if (info_filter_len(var,field,len) == 0){
+      nvals = info_field_len(var,field)
+      if ((nvals >= lmin) && (nvals <= lmax)){
         print $0
       }
     }

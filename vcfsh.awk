@@ -51,6 +51,16 @@ function info_dict2str(info) {
 }
 
 ###############################################################################
+
+function info_field_len(variant,field) {
+  info_str2dict(variant[8],info)
+  if (field in info) {
+    return split(info[field],a,",")
+  }
+  return -1
+}
+
+###############################################################################
 # Filter an VCF line based on the number of fields in an info field
 # variant: VCF array (e.g. from str2var)
 # field: the name of the field
@@ -82,6 +92,33 @@ function info_filter_val(variant,field,val) {
   }
   return 1
 }
+
+###############################################################################
+# Filter a VCF line out if the info field value is smaller than a given value
+
+function info_filter_min(variant,field,val) {
+  info_str2dict(variant[8],info)
+  if (field in info) {
+    if (info[field] >= val){
+      return 0
+    }
+  }
+  return 1
+}
+
+###############################################################################
+# Same as above, but for values larger than a given value
+
+function info_filter_max(variant,field,val) {
+  info_str2dict(variant[8],info)
+  if (field in info) {
+    if (info[field] <= val){
+      return 0
+    }
+  }
+  return 1
+}
+
 
 ###############################################################################
 # Copy a VCF array into another array
