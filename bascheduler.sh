@@ -105,29 +105,36 @@ function runJob() {
 
 ###############################################################################
 
+function updateCompletedJobs() {
+  local schedDir="$1"
+  local completed=`getnVal $schedDir ncompleted`
+  local new_completed_files=(`ls $schedDir/completed_stack`)
+  local new_completed_count=${#new_completed_files[@]}
+  setnVal $schedDir ncompleted $((completed + new_completed_count))
+  for f in ${new_completed_files[@]}; do
+    mv $schedDir/completed_stack/$f $schedDir/completed
+  done
+}
+
+###############################################################################
+
 function getTotalJobs(){
-#  echo "getTotalJobs" >&2
   getnVal $schedDir ntotal
 }
 
 ###############################################################################
 
 function getQueuedJobs() {
-#  echo "getQueuedJobs" >&2
-
   local schedDir="$1"
   local total=`getnVal $schedDir ntotal`
   local running=`getRunningJobs $schedDir`
   local completed=`getnVal $schedDir ncompleted`
-#  echo "getQueuedJobs : $total - $running - $completed" >&2
   echo `expr $total - $running - $completed`
 }
 
 ###############################################################################
 
 function getRunningJobs() {
-#  echo "getRunningJobs" >&2
-
   local schedDir="$1"
   ls $schedDir/running | wc -l
 }
@@ -138,22 +145,14 @@ function getCompletedJobs() {
 #  echo "getCompletedJobs" >&2
 
   local schedDir="$1"
-  local completed=`getnVal $schedDir ncompleted`
-  local new_completed_files=(`ls $schedDir/completed_stack`)
-  local new_completed_count=${#new_completed_files[@]}
-  setnVal $schedDir ncompleted $((completed + new_completed_count))
-  for f in ${new_completed_files[@]}; do
-    mv $schedDir/completed_stack/$f $schedDir/completed
-  done
-  echo $((completed + new_completed_count))
+  getnVal $schedDir ncompleted
 }
 
 ###############################################################################
 
 function printStatus() {
   local schedDir="$1"
-#  echo "printStatus" >&2
-  echo -en "\r#Queued: `getQueuedJobs $schedDir`, Running: `getRunningJobs $schedDir`, Completed: `getCompletedJobs $schedDir`"
+  printf "\r#Queued: %10s, Running %10s, Complete %10s" `getQueuedJobs $schedDir` `getRunningJobs $schedDir` `getCompletedJobs $schedDir`
 }
 
 ###############################################################################
@@ -164,6 +163,8 @@ function runBasch() {
   local nJobs=`getTotalJobs $schedDir`
 
   while true; do
+
+    updateCompletedJobs $schedDir
 
     while [ `getRunningJobs $schedDir` -lt $nProc ] && [ `getQueuedJobs $schedDir` -gt 0 ]; do
 
