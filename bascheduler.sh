@@ -1,13 +1,19 @@
 #!/bin/bash
 
+declare -A basch_stats
+
 function initSched() {
 
   local schedDir=`mktemp -d`
+
+  setnVal $schedDir ntotal 0
+  setnVal $schedDir ncompleted 0
 
   mkdir -p $schedDir/jobcommands
   mkdir -p $schedDir/queued
   mkdir -p $schedDir/running
   mkdir -p $schedDir/completed
+  mkdir -p $schedDir/completed_stack
   mkdir -p $schedDir/output
 
   ( >&2 echo "#Initialized BASCHeduler in $schedDir" )
@@ -17,10 +23,34 @@ function initSched() {
 
 ###############################################################################
 
+function getnVal() {
+  local schedDir="$1"
+  local key="$2"
+  cat $schedDir/$key
+}
+
+###############################################################################
+
+function setnVal() {
+  local schedDir="$1"
+  local key="$2"
+  local val="$3"
+  echo -en "$val" > $schedDir/$key
+}
+
+###############################################################################
+
 function queueJob() {
   local schedDir="$1"
   local jobID="$2"
   touch "$schedDir/queued/$jobID"
+  local total=`getnVal $schedDir ntotal`
+
+  setnVal $schedDir ntotal $((total+1))
+
+  if [ `expr $total % 100` -eq 0 ]; then
+    printStatus $schedDir
+  fi  
 }
 
 ###############################################################################
@@ -28,7 +58,8 @@ function queueJob() {
   # If you need alternative scheduling, this here is what you need to change
 function popQueue() {
   local schedDir="$1"
-  echo `ls $schedDir/queued | head -n 1`
+  # An attempt to optimize the jobs (because it hangs when there are many jobs queued)
+  ls -U -1 $schedDir/queued | head -n 1
 }
 
 ###############################################################################
@@ -52,7 +83,7 @@ function endJob() {
   local rval="$3"
 
   rm "$schedDir/running/$jobID"
-  echo "$rval" > "$schedDir/completed/$jobID"
+  echo "$rval" > "$schedDir/completed_stack/$jobID"
 
 }
 
@@ -74,30 +105,55 @@ function runJob() {
 
 ###############################################################################
 
+function getTotalJobs(){
+#  echo "getTotalJobs" >&2
+  getnVal $schedDir ntotal
+}
+
+###############################################################################
+
 function getQueuedJobs() {
+#  echo "getQueuedJobs" >&2
+
   local schedDir="$1"
-  ls $schedDir/queued | wc -l
+  local total=`getnVal $schedDir ntotal`
+  local running=`getRunningJobs $schedDir`
+  local completed=`getnVal $schedDir ncompleted`
+#  echo "getQueuedJobs : $total - $running - $completed" >&2
+  echo `expr $total - $running - $completed`
 }
 
 ###############################################################################
 
 function getRunningJobs() {
+#  echo "getRunningJobs" >&2
+
   local schedDir="$1"
-  ls $schedDir/running | wc -l 
+  ls $schedDir/running | wc -l
 }
 
 ###############################################################################
 
 function getCompletedJobs() {
+#  echo "getCompletedJobs" >&2
+
   local schedDir="$1"
-  ls $schedDir/completed | wc -l
+  local completed=`getnVal $schedDir ncompleted`
+  local new_completed_files=(`ls $schedDir/completed_stack`)
+  local new_completed_count=${#new_completed_files[@]}
+  setnVal $schedDir ncompleted $((completed + new_completed_count))
+  for f in ${new_completed_files[@]}; do
+    mv $schedDir/completed_stack/$f $schedDir/completed
+  done
+  echo $((completed + new_completed_count))
 }
 
 ###############################################################################
 
-function getJobs() {
+function printStatus() {
   local schedDir="$1"
-  ls $schedDir/jobcommands | wc -l
+#  echo "printStatus" >&2
+  echo -en "\r#Queued: `getQueuedJobs $schedDir`, Running: `getRunningJobs $schedDir`, Completed: `getCompletedJobs $schedDir`"
 }
 
 ###############################################################################
@@ -105,17 +161,21 @@ function getJobs() {
 function runBasch() {
   local schedDir="$1"
   local nProc="$2"
-  local nJobs=`getJobs $schedDir`
+  local nJobs=`getTotalJobs $schedDir`
 
   while true; do
 
     while [ `getRunningJobs $schedDir` -lt $nProc ] && [ `getQueuedJobs $schedDir` -gt 0 ]; do
+
       local nextJob=`popQueue $schedDir`
+      if [ -z "$nextJob" ]; then
+        break
+      fi
       ( runJob "$schedDir" "$nextJob" & )
       sleep 0.01
     done
 
-    echo -en "\r#Queued: `getQueuedJobs $schedDir`, Running: `getRunningJobs $schedDir`, Completed: `getCompletedJobs $schedDir`"
+    printStatus $schedDir
 
     if [ `getCompletedJobs $schedDir` -eq $nJobs ]; then
       echo ""
@@ -149,6 +209,7 @@ function basch() {
     queueJob $schedDir $jobID
   done
 
+  getQueuedJobs $schedDir
   runBasch $schedDir $nProc
   return $?
 }
@@ -163,9 +224,9 @@ function baschf() {
   local nProc="$2"
 
   split -l 1 -d -a 10 $jobFile $schedDir/jobcommands/job.
-  ls $schedDir/jobcommands/ | while read jobID; do
+  while read jobID; do
     queueJob $schedDir $jobID
-  done
+  done <<<`ls $schedDir/jobcommands/`
 
   runBasch $schedDir $nProc
   return $?
