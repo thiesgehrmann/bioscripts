@@ -222,3 +222,56 @@ function vcf_diff() {
 }
 
 ###############################################################################
+
+function vcf_filter_nearby() {
+
+  local one="$1"
+  local two="$2"
+  local dist="$3"
+
+  awk -F $'\t' -v dist="$dist" '
+   @include "vcfsh.awk"
+
+   BEGIN{
+     OFS = FS
+     emptyVCF(current)
+     split("",vcfindex)
+   }
+   {
+     if (FNR == NR) {
+       if (substr($0,1,1) != "#") {
+         addToIndex(vcfindex,$0)
+       }
+     } else if(substr($0,1,1) == "#"){
+       print $0
+     } else {
+       str2var($0,var)
+       split("",neighborindex)
+       neighbors = 0
+       for (d=1; d <= dist; d++){
+         keyup   = var[1] ";" (var[2]+d)
+         keydown = var[1] ";" (var[2]-d)
+         if ( keyup in vcfindex){
+           addToIndex(neighborindex,vcfindex[keyup])
+           neighbors++
+         }
+         if ( keydown in vcfindex){
+           addToIndex(neighborindex,vcfindex[keydown])
+           neighbors++
+         }
+       }
+       if (neighbors == 0){
+         print $0
+       } else {
+         print "########################################"
+         print "# " var[1] ";" var[2] " excluded because of these neighbors:"
+         for (n in neighborindex) {
+           print "#  " neighborindex[n]
+         }
+         print "########################################"
+       }
+     }
+   }
+  ' $one $two
+
+}
