@@ -4,6 +4,8 @@
 VCFSH_INSTALL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 vcfshawk="$VCFSH_INSTALL_DIR/vcfsh.awk"
 
+export AWKPATH="$VCFSH_INSTALL_DIR:$AWKPATH"
+
 ###############################################################################
 
 function vcf_set_col_val() {
@@ -37,7 +39,8 @@ function vcf_add_info() {
   local name="$1"
   local val="$2"
 
-  awk -v name="$name" -v val="$val"  -i "$vcfshawk" '
+  awk -v name="$name" -v val="$val" '
+  @include "vcfsh.awk"
   {
     if (substr($0,1,1) == "#") {
       print $0
@@ -76,7 +79,9 @@ function vcf_merge_same() {
 
   sort -rk1 -k2 -k4 -k5 \
   | uniq \
-  | awk -F $'\t' -i "$vcfshawk" '
+  | awk -F $'\t' '
+   @include "vcfsh.awk"
+
    BEGIN{
      OFS = FS
      emptyVCF(current)
@@ -111,7 +116,9 @@ function vcf_filter_info_length() {
   local lmin="$2"
   local lmax="$3"
 
-  awk -v field="$field" -v lmin="$lmin" -v lmax="$lmax" -i "$vcfshawk" '
+  awk -v field="$field" -v lmin="$lmin" -v lmax="$lmax" '
+    @include "vcfsh.awk"
+
     {
     if (substr($0,1,1) == "#") {
       print $0
@@ -133,7 +140,9 @@ function vcf_filter_info_value() {
   local field="$1"
   local val="$2"
 
-  awk -v field="$field" -v val="$val" -i "$vcfshawk" '
+  awk -v field="$field" -v val="$val" '
+    @include "vcfsh.awk"
+
     {
     if (substr($0,1,1) == "#") {
       print $0
@@ -155,7 +164,9 @@ function vcf_filter_info() {
   local field="$2"
   local val="$3"
 
-  awk -v func="func" -v field="$field" -v val="$val" -i "$vcfshawk" '
+  awk -v func="func" -v field="$field" -v val="$val" '
+    @include "vcfsh.awk"
+
     {
     if (substr($0,1,1) == "#") {
       print $0
@@ -179,7 +190,9 @@ function vcf_diff() {
   local one="$1"
   local two="$2"
 
-  awk -F $'\t' -i "$vcfshawk" '
+  awk -F $'\t' '
+   @include "vcfsh.awk"
+
    BEGIN{
      OFS = FS
      emptyVCF(current)
