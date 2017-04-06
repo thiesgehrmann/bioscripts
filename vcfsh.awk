@@ -119,6 +119,26 @@ function info_filter_max(variant,field,val) {
   return 1
 }
 
+function info_filter_mean_min(variant, field, val) {
+  info_str2dict(variant[8],info)
+  if(field in info) {
+    split(info[field],fieldarr,",")
+    total=0
+    count=0
+    for (x in fieldarr){
+      total+= fieldarr[x]
+      count++
+    }
+    if (total/count > val){
+      return 0
+    } else {
+      return 1
+    }
+  }
+  return 1
+
+}
+
 
 ###############################################################################
 # Copy a VCF array into another array

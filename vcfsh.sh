@@ -164,7 +164,7 @@ function vcf_filter_info() {
   local field="$2"
   local val="$3"
 
-  awk -v func="func" -v field="$field" -v val="$val" '
+  awk -v funcname="$func" -v field="$field" -v val="$val" '
     @include "vcfsh.awk"
 
     {
@@ -172,7 +172,7 @@ function vcf_filter_info() {
       print $0
     } else {
       str2var($0,var)
-      if (@func(var,field,val) == 0){
+      if (@funcname(var,field,val) == 0){
         print $0
       }
     }
@@ -275,3 +275,6 @@ function vcf_filter_nearby() {
   ' $one $two
 
 }
+
+###############################################################################
+
