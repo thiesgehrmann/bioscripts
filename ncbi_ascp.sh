@@ -11,7 +11,7 @@ else
   list="$@"
 fi
 
-aspera_key="`readlink $(which asperaconnect)| rev | cut -d/ -f1 --complement | rev`/../etc/asperaweb_id_dsa.openssh"
+aspera_key="`readlink -f $(which asperaconnect)| rev | cut -d/ -f1 --complement | rev`/../etc/asperaweb_id_dsa.openssh"
 aspera_key="`readlink -f $aspera_key`"
 echo $aspera_key
 if [ ! -e "$aspera_key" ]; then
