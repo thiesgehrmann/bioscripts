@@ -17,7 +17,7 @@ case "$name" in
     exit 0
     ;;
   *)
-   echo "Attempting to connect to $name. hello"
+   echo "Attempting to connect to $name"
    ;;
 esac
 
