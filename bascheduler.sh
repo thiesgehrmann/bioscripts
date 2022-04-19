@@ -203,6 +203,10 @@ function basch() {
   declare -a jobs=("${!1}")
   local nProc="$2"
   
+  if [ -z "$nProc" ]; then
+      nProc=4
+  fi
+  
   local jobID=0
   for job in "${jobs[@]}"; do
     let jobID=jobID+1
@@ -223,6 +227,10 @@ function baschf() {
 
   local jobFile="$1"
   local nProc="$2"
+  
+  if [ -z "$nProc" ]; then
+      nProc=4
+  fi
 
   split -l 1 -d -a 10 $jobFile $schedDir/jobcommands/job.
   while read jobID; do
